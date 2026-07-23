@@ -6,5 +6,5 @@
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/proxy.py" },
     { "src": "/(.*)", "dest": "/index.html" }
-  ],
+  ]
 }
