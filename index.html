@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 图片生成器</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #0f0f13;
+    color: #e8e8ed;
+    min-height: 100vh;
+  }
+  .container { max-width: 720px; margin: 0 auto; padding: 40px 20px; }
+  h1 { font-size: 28px; font-weight: 600; margin-bottom: 8px; background: linear-gradient(135deg, #a78bfa, #60a5fa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .subtitle { color: #888; font-size: 14px; margin-bottom: 32px; }
+
+  .card { background: #1a1a23; border-radius: 16px; padding: 24px; margin-bottom: 20px; border: 1px solid #2a2a35; }
+  .card-title { font-size: 13px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+
+  .model-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .model-btn {
+    padding: 14px 12px; border-radius: 12px; border: 2px solid #2a2a35;
+    background: #1a1a23; color: #e8e8ed; cursor: pointer; text-align: center;
+    transition: all 0.2s; font-size: 13px; line-height: 1.4;
+  }
+  .model-btn:hover { border-color: #444; }
+  .model-btn.active { border-color: #7c5cfc; background: rgba(124, 92, 252, 0.12); }
+  .model-btn .model-name { font-weight: 600; font-size: 14px; display: block; }
+  .model-btn .model-desc { font-size: 11px; color: #888; margin-top: 4px; display: block; }
+
+  .params-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  .form-group { margin-bottom: 18px; }
+  .form-group:last-child { margin-bottom: 0; }
+  label { display: block; font-size: 13px; font-weight: 500; color: #aaa; margin-bottom: 6px; }
+  label .required { color: #f87171; margin-left: 2px; }
+
+  select, textarea {
+    width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid #333;
+    background: #252530; color: #e8e8ed; font-size: 14px; outline: none;
+    transition: border-color 0.2s; font-family: inherit;
+  }
+  select:focus, textarea:focus { border-color: #7c5cfc; }
+  textarea { resize: vertical; min-height: 80px; }
+
+  .btn-generate {
+    width: 100%; padding: 14px; border-radius: 12px; border: none;
+    background: linear-gradient(135deg, #7c5cfc, #5c3cfc); color: white;
+    font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+    margin-top: 20px;
+  }
+  .btn-generate:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(124, 92, 252, 0.3); }
+  .btn-generate:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  .radio-group { display: flex; flex-wrap: wrap; gap: 6px; }
+  .radio-btn {
+    padding: 6px 12px; border-radius: 8px; border: 1px solid #333;
+    background: #252530; color: #aaa; cursor: pointer; font-size: 12px;
+    transition: all 0.15s;
+  }
+  .radio-btn:hover { border-color: #555; color: #e8e8ed; }
+  .radio-btn.active { border-color: #7c5cfc; background: rgba(124, 92, 252, 0.15); color: #c4b5fd; }
+
+  .result-area { display: none; }
+  .result-area.visible { display: block; }
+  .result-image { width: 100%; border-radius: 12px; margin-top: 12px; cursor: pointer; }
+  .result-info { font-size: 13px; color: #888; margin-top: 8px; }
+  .result-info span { color: #e8e8ed; }
+
+  .progress-bar-wrapper { display: none; margin-top: 16px; }
+  .progress-bar-wrapper.visible { display: block; }
+  .progress-bar-bg { height: 4px; background: #2a2a35; border-radius: 4px; overflow: hidden; }
+  .progress-bar-fill { height: 100%; background: linear-gradient(90deg, #7c5cfc, #a78bfa); border-radius: 4px; width: 0%; transition: width 0.5s ease; }
+  .progress-text { font-size: 12px; color: #888; margin-top: 8px; text-align: center; }
+
+  .error-msg { display: none; margin-top: 12px; padding: 12px 16px; background: rgba(248, 113, 113, 0.1); border: 1px solid rgba(248, 113, 113, 0.2); border-radius: 10px; color: #fca5a5; font-size: 13px; }
+  .error-msg.visible { display: block; }
+
+  .switch-wrapper { display: flex; align-items: center; gap: 10px; }
+  .switch { position: relative; width: 42px; height: 24px; cursor: pointer; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch-slider { position: absolute; inset: 0; background: #333; border-radius: 24px; transition: 0.3s; }
+  .switch-slider:before { content: ''; position: absolute; width: 18px; height: 18px; border-radius: 50%; background: white; top: 3px; left: 3px; transition: 0.3s; }
+  .switch input:checked + .switch-slider { background: #7c5cfc; }
+  .switch input:checked + .switch-slider:before { transform: translateX(18px); }
+  .switch-label { font-size: 13px; color: #aaa; }
+
+  .balance-tag {
+    font-size: 11px; color: #888; background: #252530; padding: 4px 10px;
+    border-radius: 20px; border: 1px solid #333; cursor: pointer;
+    transition: all 0.2s; text-transform: none; letter-spacing: 0; font-weight: 400;
+  }
+  .balance-tag:hover { border-color: #7c5cfc; color: #c4b5fd; }
+  .balance-tag.loading { opacity: 0.5; pointer-events: none; }
+
+  .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-top: 12px; }
+  .gallery-item { position: relative; border-radius: 10px; overflow: hidden; aspect-ratio: 1; background: #252530; }
+  .gallery-item img { width: 100%; height: 100%; object-fit: cover; cursor: pointer; transition: transform 0.2s; }
+  .gallery-item img:hover { transform: scale(1.03); }
+  .gallery-empty { color: #555; text-align: center; padding: 24px; font-size: 13px; }
+
+  .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #1a1a23; border: 1px solid #333; border-radius: 12px; padding: 12px 24px; font-size: 13px; color: #e8e8ed; box-shadow: 0 8px 32px rgba(0,0,0,0.4); z-index: 100; display: none; }
+  .toast.visible { display: block; animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateX(-50%) translateY(-10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+
+  @media (max-width: 600px) {
+    .params-row { grid-template-columns: 1fr; }
+    .model-grid { grid-template-columns: 1fr; }
+    .container { padding: 20px 16px; }
+    .gallery { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>
+    AI 图片生成器
+    <span class="balance-tag" id="balanceTag" onclick="checkBalance()">查余额</span>
+  </h1>
+  <p class="subtitle">选择模型，输入描述，AI 即刻生成</p>
+
+  <div class="card">
+    <div class="card-title">选择模型</div>
+    <div class="model-grid" id="modelGrid"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">参数设置</div>
+    <div id="paramCommon" class="params-row"></div>
+    <div id="paramSpecific"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">描述 Prompt</div>
+    <div class="form-group">
+      <textarea id="promptInput" placeholder="用自然语言描述你想要的画面，越详细效果越好…&#10;&#10;例如：一只橘猫躺在阳光洒落的窗台上，身边有一杯冒着热气的咖啡，日系动漫风格"></textarea>
+    </div>
+    <button class="btn-generate" id="generateBtn" onclick="generate()">✨ 生成图片</button>
+
+    <div class="progress-bar-wrapper" id="progressWrapper">
+      <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
+      <div class="progress-text" id="progressText">提交任务中…</div>
+    </div>
+    <div class="error-msg" id="errorMsg"></div>
+  </div>
+
+  <div class="card result-area" id="resultArea">
+    <div class="card-title">
+      生成结果
+      <span style="font-size:11px;color:#555;font-weight:400;text-transform:none;letter-spacing:0;" id="resultMeta"></span>
+    </div>
+    <img class="result-image" id="resultImage" alt="生成的图片" onclick="window.open(this.src,'_blank')">
+    <div class="result-info" id="resultInfo"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">历史记录 <span style="font-size:11px;color:#555;font-weight:400;text-transform:none;letter-spacing:0;">（仅保存在本浏览器）</span></div>
+    <div class="gallery" id="gallery">
+      <div class="gallery-empty">还没有生成记录</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API_BASE = '/api';
+
+const MODELS = {
+  'gemini-3-pro-image-preview': {
+    display: 'Nano Banana Pro',
+    desc: '高清质感',
+    params: [
+      { name: 'aspectRatio', label: '图片比例', type: 'select', required: true,
+        options: [
+          { v: 'auto', l: '自动' }, { v: '1:1', l: '1:1 方形' },
+          { v: '2:3', l: '2:3 竖屏' }, { v: '3:2', l: '3:2 横屏' },
+          { v: '3:4', l: '3:4 竖屏' }, { v: '4:3', l: '4:3 横屏' },
+          { v: '4:5', l: '4:5 竖屏' }, { v: '5:4', l: '5:4 横屏' },
+          { v: '9:16', l: '9:16 手机壁纸' }, { v: '16:9', l: '16:9 宽屏' },
+          { v: '21:9', l: '21:9 超宽屏' }
+        ]},
+      { name: 'imageSize', label: '画质', type: 'select', required: true,
+        options: [{ v: '1K', l: '1K 标清' }, { v: '2K', l: '2K 高清' }, { v: '4K', l: '4K 超清' }]}
+    ]
+  },
+  'gemini-3.1-flash-image-preview': {
+    display: 'Nano Banana 2',
+    desc: '快速 · 支持联网',
+    params: [
+      { name: 'aspectRatio', label: '图片比例', type: 'select', required: true,
+        options: [
+          { v: 'auto', l: '自动' }, { v: '1:1', l: '1:1 方形' },
+          { v: '2:3', l: '2:3 竖屏' }, { v: '3:2', l: '3:2 横屏' },
+          { v: '3:4', l: '3:4 竖屏' }, { v: '4:3', l: '4:3 横屏' },
+          { v: '4:5', l: '4:5 竖屏' }, { v: '5:4', l: '5:4 横屏' },
+          { v: '9:16', l: '9:16 手机壁纸' }, { v: '16:9', l: '16:9 宽屏' },
+          { v: '21:9', l: '21:9 超宽屏' }, { v: '1:8', l: '1:8 超竖屏' }, { v: '8:1', l: '8:1 超宽屏' }
+        ]},
+      { name: 'imageSize', label: '画质', type: 'select', required: true,
+        options: [{ v: '0.5K', l: '0.5K 极速' }, { v: '1K', l: '1K 标清' }, { v: '2K', l: '2K 高清' }, { v: '4K', l: '4K 超清' }]},
+      { name: 'thinkingLevel', label: '思考深度', type: 'select', required: false,
+        options: [{ v: '', l: '默认' }, { v: 'minimal', l: '快速' }, { v: 'high', l: '深度思考' }]}
+    ]
+  },
+  'qwen-image': {
+    display: 'Qwen-image-max',
+    desc: '文字渲染 · 多图融合',
+    params: [
+      { name: 'size', label: '图片比例', type: 'radio', required: true,
+        options: [
+          { v: 'auto', l: '自动' }, { v: '1:1', l: '1:1 方形' },
+          { v: '2:3', l: '2:3 竖屏' }, { v: '3:2', l: '3:2 横屏' },
+          { v: '3:4', l: '3:4 竖屏' }, { v: '4:3', l: '4:3 横屏' },
+          { v: '9:16', l: '9:16 手机壁纸' }, { v: '16:9', l: '16:9 宽屏' },
+          { v: '21:9', l: '21:9 超宽屏' }
+        ]},
+      { name: 'prompt_extend', label: '智能优化 Prompt', type: 'radio', required: false,
+        options: [{ v: 'true', l: '开启' }, { v: 'false', l: '关闭' }]}
+    ]
+  }
+};
+
+const MODEL_ORDER = ['gemini-3-pro-image-preview', 'gemini-3.1-flash-image-preview', 'qwen-image'];
+
+let currentModel = 'gemini-3-pro-image-preview';
+let pollingTimer = null;
+let history = JSON.parse(localStorage.getItem('imgHistory') || '[]');
+
+// Init model buttons
+function initModelGrid() {
+  const grid = document.getElementById('modelGrid');
+  grid.innerHTML = '';
+  MODEL_ORDER.forEach(key => {
+    const m = MODELS[key];
+    const btn = document.createElement('button');
+    btn.className = 'model-btn' + (key === currentModel ? ' active' : '');
+    btn.dataset.model = key;
+    btn.innerHTML = `<span class="model-name">${m.display}</span><span class="model-desc">${m.desc}</span>`;
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.model-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentModel = key;
+      renderParams();
+    });
+    grid.appendChild(btn);
+  });
+}
+
+function renderParams() {
+  const info = MODELS[currentModel];
+  if (!info) return;
+  const commonDiv = document.getElementById('paramCommon');
+  const specificDiv = document.getElementById('paramSpecific');
+  commonDiv.innerHTML = '';
+  specificDiv.innerHTML = '';
+
+  // Web search toggle for Banana 2
+  if (currentModel === 'gemini-3.1-flash-image-preview') {
+    const div = document.createElement('div');
+    div.className = 'form-group';
+    div.innerHTML = `
+      <label>联网搜索</label>
+      <div class="switch-wrapper">
+        <label class="switch">
+          <input type="checkbox" id="webSearch">
+          <span class="switch-slider"></span>
+        </label>
+        <span class="switch-label" id="webSearchLabel">关闭</span>
+      </div>
+    `;
+    specificDiv.appendChild(div);
+    const cb = div.querySelector('input');
+    cb.addEventListener('change', () => {
+      document.getElementById('webSearchLabel').textContent = cb.checked ? '开启' : '关闭';
+    });
+  }
+
+  info.params.forEach(p => {
+    if (p.type === 'select') {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'form-group';
+      let html = `<label>${p.label}${p.required ? '<span class="required"> *</span>' : ''}</label>`;
+      html += `<select id="field-${p.name}">`;
+      p.options.forEach(o => { html += `<option value="${o.v}">${o.l}</option>`; });
+      html += `</select>`;
+      wrapper.innerHTML = html;
+      commonDiv.appendChild(wrapper);
+    } else if (p.type === 'radio') {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'form-group';
+      let html = `<label>${p.label}${p.required ? '<span class="required"> *</span>' : ''}</label>`;
+      html += `<div class="radio-group" id="radio-${p.name}">`;
+      p.options.forEach((o, i) => {
+        html += `<div class="radio-btn${i === 0 ? ' active' : ''}" data-value="${o.v}" onclick="selectRadio('${p.name}', '${o.v}', this)">${o.l}</div>`;
+      });
+      html += `</div>`;
+      wrapper.innerHTML = html;
+      commonDiv.appendChild(wrapper);
+    }
+  });
+}
+
+function selectRadio(name, value, el) {
+  document.querySelectorAll(`#radio-${name} .radio-btn`).forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function getParams() {
+  const info = MODELS[currentModel];
+  const params = {};
+  info.params.forEach(p => {
+    if (p.type === 'select') {
+      const el = document.getElementById(`field-${p.name}`);
+      if (el && el.value) params[p.name] = el.value;
+    } else if (p.type === 'radio') {
+      const active = document.querySelector(`#radio-${p.name} .radio-btn.active`);
+      if (active) params[p.name] = active.dataset.value;
+    }
+  });
+  if (currentModel === 'gemini-3.1-flash-image-preview') {
+    const ws = document.getElementById('webSearch');
+    if (ws && ws.checked) params.web_search = 'true';
+  }
+  return params;
+}
+
+async function generate() {
+  const prompt = document.getElementById('promptInput').value.trim();
+  if (!prompt) { showError('请输入图片描述'); return; }
+
+  hideError();
+  document.getElementById('resultArea').classList.remove('visible');
+  const btn = document.getElementById('generateBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ 生成中…';
+
+  const pw = document.getElementById('progressWrapper');
+  pw.classList.add('visible');
+  setProgress(5, '提交任务中…');
+
+  try {
+    const params = getParams();
+    const body = { model: currentModel, prompt, params };
+
+    const resp = await fetch(`${API_BASE}/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await resp.json();
+    if (!resp.ok || data.code !== 200) {
+      throw new Error(data.msg || data.error?.message || data.error || `请求失败 (${resp.status})`);
+    }
+
+    const taskId = data.data.task_id;
+    setProgress(15, `✅ 任务已提交 (ID: ${taskId})，等待处理…`);
+    await pollTask(taskId);
+  } catch (err) {
+    showError(err.message);
+    pw.classList.remove('visible');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '✨ 生成图片';
+  }
+}
+
+async function pollTask(taskId) {
+  const startTime = Date.now();
+  let lastProgress = '';
+
+  while (true) {
+    await new Promise(r => setTimeout(r, 3000));
+
+    const resp = await fetch(`${API_BASE}/status?task_id=${taskId}`);
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error?.message || data.error || `轮询失败 (${resp.status})`);
+
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    const pct = parseInt(data.progress) || 0;
+    const displayPct = Math.max(15, Math.min(pct, 90));
+
+    if (data.progress !== lastProgress) {
+      setProgress(displayPct, `⏳ ${data.status || '生成中'}  ${data.progress || ''}  (${elapsed}s)`);
+      lastProgress = data.progress;
+    }
+
+    if (data.is_final) {
+      if (data.state === 'success' || data.status_group === '已完成') {
+        setProgress(100, '✅ 生成完成！');
+        showResult(data, elapsed);
+        return;
+      } else {
+        throw new Error(data.error || '生成失败');
+      }
+    }
+
+    if (elapsed > 300) throw new Error('生成超时（超过5分钟），请稍后重试');
+  }
+}
+
+function showResult(data, elapsed) {
+  const imgUrl = data.result_url;
+  if (!imgUrl) { showError('生成成功但未获取到图片地址'); return; }
+
+  document.getElementById('resultImage').src = imgUrl;
+  document.getElementById('resultMeta').textContent = `${MODELS[currentModel].display} · ${elapsed}s`;
+  document.getElementById('resultInfo').innerHTML =
+    `模型: <span>${MODELS[currentModel].display}</span> · 耗时: <span>${elapsed} 秒</span>` +
+    (data.cost ? ` · 消耗: <span>${data.cost} 算力</span>` : '');
+  document.getElementById('resultArea').classList.add('visible');
+  document.getElementById('progressWrapper').classList.remove('visible');
+
+  // Save to history
+  addHistory(imgUrl, currentModel, MODELS[currentModel].display);
+}
+
+function setProgress(pct, text) {
+  document.getElementById('progressFill').style.width = `${Math.min(pct, 100)}%`;
+  document.getElementById('progressText').textContent = text;
+}
+
+function showError(msg) {
+  const el = document.getElementById('errorMsg');
+  el.textContent = msg;
+  el.classList.add('visible');
+}
+
+function hideError() {
+  document.getElementById('errorMsg').classList.remove('visible');
+}
+
+// Balance
+async function checkBalance() {
+  const tag = document.getElementById('balanceTag');
+  tag.classList.add('loading');
+  tag.textContent = '查询中…';
+  try {
+    const resp = await fetch(`${API_BASE}/balance`);
+    const data = await resp.json();
+    if (data.balance !== undefined) {
+      const quota = data.api_key_quota;
+      let text = `💰 ${data.balance} 算力`;
+      if (quota && quota.limit > 0) text += ` (已用 ${quota.used} / 限额 ${quota.limit})`;
+      tag.textContent = text;
+      showToast(`余额: ${data.balance} 算力`);
+    } else {
+      tag.textContent = '查余额';
+      showToast('查询失败: ' + (data.error || '未知错误'));
+    }
+  } catch (e) {
+    tag.textContent = '查余额';
+    showToast('查询失败: ' + e.message);
+  }
+  tag.classList.remove('loading');
+}
+
+// History (localStorage)
+function addHistory(url, modelKey, modelDisplay) {
+  history.unshift({ url, model: modelDisplay, time: new Date().toLocaleString() });
+  if (history.length > 50) history = history.slice(0, 50);
+  localStorage.setItem('imgHistory', JSON.stringify(history));
+  renderGallery();
+}
+
+function renderGallery() {
+  const g = document.getElementById('gallery');
+  if (history.length === 0) {
+    g.innerHTML = '<div class="gallery-empty">还没有生成记录</div>';
+    return;
+  }
+  g.innerHTML = history.map((h, i) =>
+    `<div class="gallery-item">
+      <img src="${h.url}" alt="" loading="lazy" onclick="window.open('${h.url}','_blank')" title="${h.model} · ${h.time}">
+    </div>`
+  ).join('');
+}
+
+// Toast
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('visible');
+  setTimeout(() => t.classList.remove('visible'), 3000);
+}
+
+// Init
+initModelGrid();
+renderParams();
+renderGallery();
+</script>
+</body>
+</html>
