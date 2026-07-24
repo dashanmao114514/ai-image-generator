@@ -14,6 +14,16 @@
   .container { max-width: 860px; margin: 0 auto; padding: 20px; display: flex; flex-direction: column; height: 100vh; }
   a { color: inherit; text-decoration: none; }
 
+  /* ── 收款码弹窗 ── */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 999; display: none; align-items: center; justify-content: center; }
+  .modal-overlay.visible { display: flex; }
+  .modal-box { background: #1a1a23; border-radius: 16px; padding: 24px; border: 1px solid #2a2a35; text-align: center; max-width: 360px; width: 90%; }
+  .modal-box img { width: 100%; max-width: 300px; border-radius: 12px; margin: 12px 0; }
+  .modal-box .modal-title { font-size: 16px; font-weight: 600; color: #e8e8ed; }
+  .modal-box .modal-hint { font-size: 12px; color: #666; margin-bottom: 8px; }
+  .modal-box .modal-close { padding: 8px 24px; border-radius: 10px; border: 1px solid #333; background: transparent; color: #888; cursor: pointer; font-size: 13px; transition: all 0.15s; }
+  .modal-box .modal-close:hover { border-color: #7c5cfc; color: #c4b5fd; }
+
   /* ── 顶栏 ── */
   .header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-shrink: 0; }
   .header .logo { display: flex; align-items: center; gap: 8px; font-size: 20px; font-weight: 700; background: linear-gradient(135deg, #a78bfa, #60a5fa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
@@ -289,7 +299,7 @@
       大山猫 AI 工作室
     </div>
     <div class="actions">
-      <a class="pill recharge" href="https://qiaojiang.lk666.ai/wode" target="_blank">💰 充值</a>
+      <span class="pill recharge" onclick="showRecharge()">💰 充值</span>
       <span class="pill" id="balanceTag" onclick="checkBalance()">查余额</span>
     </div>
   </div>
@@ -424,6 +434,17 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- 收款码弹窗 -->
+<div class="modal-overlay" id="rechargeModal" onclick="closeRecharge(event)">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-title">💰 扫码充值</div>
+    <div class="modal-hint">微信扫一扫，向大山猫 AI 付款</div>
+    <img src="/qrcode.png" alt="收款码">
+    <div style="font-size:12px;color:#555;margin-bottom:12px;">付款后自动到账，如有问题联系客服</div>
+    <button class="modal-close" onclick="closeRecharge()">关闭</button>
+  </div>
+</div>
 
 <script>
 const API_BASE = '/api';
@@ -967,6 +988,14 @@ async function checkBalance() {
     } else { tag.textContent = '查余额'; }
   } catch(e) { tag.textContent = '查余额'; }
   tag.classList.remove('loading');
+}
+
+function showRecharge() {
+  document.getElementById('rechargeModal').classList.add('visible');
+}
+function closeRecharge(e) {
+  if (e && e.target !== e.currentTarget) return;
+  document.getElementById('rechargeModal').classList.remove('visible');
 }
 
 function showToast(msg) {
