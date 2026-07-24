@@ -141,11 +141,27 @@
   .ref-item:hover .del-btn { opacity: 1; }
   .ref-count { font-size: 11px; color: #555; margin-top: 6px; }
 
+  /* Tab 切换 */
+  .tabs { display: flex; gap: 4px; margin-bottom: 20px; background: #1a1a23; border-radius: 12px; padding: 4px; border: 1px solid #2a2a35; }
+  .tab-btn { flex: 1; padding: 10px; border-radius: 10px; border: none; background: transparent; color: #666; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; text-align: center; }
+  .tab-btn:hover { color: #aaa; }
+  .tab-btn.active { background: #7c5cfc; color: #fff; box-shadow: 0 2px 8px rgba(124,92,252,0.3); }
+  .tab-icon { margin-right: 6px; }
+
+  /* 视频参数行 */
+  .video-params { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* 视频播放器 */
+  video.result-video { width: 100%; border-radius: 12px; margin-top: 12px; background: #000; }
+
+  .section-hidden { display: none !important; }
+
   @media (max-width: 600px) {
     .params-row { grid-template-columns: 1fr; }
     .model-grid { grid-template-columns: 1fr; }
     .container { padding: 20px 16px; }
     .gallery { grid-template-columns: repeat(2, 1fr); }
+    .video-params { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -162,62 +178,116 @@
     大山猫 AI
     <span class="balance-tag" id="balanceTag" onclick="checkBalance()">查余额</span>
   </h1>
-  <p class="subtitle">大山猫 AI · 由 GPT Image 2 / Gemini / Qwen 驱动，输入描述一键生成</p>
+  <p class="subtitle">大山猫 AI · 图片生成 & 视频生成</p>
 
-  <div class="card">
-    <div class="card-title">选择模型</div>
-    <div class="model-grid" id="modelGrid"></div>
+  <!-- Tab 切换 -->
+  <div class="tabs">
+    <button class="tab-btn active" id="tabImage" onclick="switchTab('image')">
+      <span class="tab-icon">🎨</span>图片
+    </button>
+    <button class="tab-btn" id="tabVideo" onclick="switchTab('video')">
+      <span class="tab-icon">🎬</span>视频
+    </button>
   </div>
 
-  <div class="card">
-    <div class="card-title">参数设置</div>
-    <div id="paramCommon" class="params-row"></div>
-    <div id="paramSpecific"></div>
-  </div>
-
-  <div class="card">
-    <div class="card-title">描述 Prompt</div>
-    <div class="form-group">
-      <textarea id="promptInput" placeholder="用自然语言描述你想要的画面，越详细效果越好…&#10;&#10;例如：一只橘猫躺在阳光洒落的窗台上，身边有一杯冒着热气的咖啡，日系动漫风格"></textarea>
+  <!-- ============ 图片生成区 ============ -->
+  <div id="imageSection">
+    <div class="card">
+      <div class="card-title">选择模型</div>
+      <div class="model-grid" id="modelGrid"></div>
     </div>
 
-    <!-- 参考图上传（拖拽区 + 图片框） -->
-    <div class="ref-section" id="refSection">
-      <div class="ref-label">📎 参考图（选填 · 拖入或点击上传，最多14张）</div>
-      <!-- 拖拽放置区 -->
-      <div class="drop-zone" id="dropZone">
-        <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <polyline points="17 8 12 3 7 8"/>
-          <line x1="12" y1="3" x2="12" y2="15"/>
-        </svg>
-        <div>拖入图片到此，或 <strong style="color:#7c5cfc">点击选择</strong></div>
-        <div class="drop-hint">支持 JPG / PNG / WebP</div>
+    <div class="card">
+      <div class="card-title">参数设置</div>
+      <div id="paramCommon" class="params-row"></div>
+      <div id="paramSpecific"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">描述 Prompt</div>
+      <div class="form-group">
+        <textarea id="promptInput" placeholder="用自然语言描述你想要的画面，越详细效果越好…&#10;&#10;例如：一只橘猫躺在阳光洒落的窗台上，身边有一杯冒着热气的咖啡，日系动漫风格"></textarea>
       </div>
-      <!-- 已上传图片列表 -->
-      <div class="ref-grid" id="refGrid"></div>
-      <div class="ref-count" id="refCount"></div>
-      <input type="file" id="refInput" accept="image/png,image/jpeg,image/webp" multiple style="display:none">
-    </div>
 
-    <button class="btn-generate" id="generateBtn" onclick="generate()">✨ 生成图片</button>
+      <!-- 参考图上传（拖拽区 + 图片框） -->
+      <div class="ref-section" id="refSection">
+        <div class="ref-label">📎 参考图（选填 · 拖入或点击上传，最多14张）</div>
+        <div class="drop-zone" id="dropZone">
+          <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          <div>拖入图片到此，或 <strong style="color:#7c5cfc">点击选择</strong></div>
+          <div class="drop-hint">支持 JPG / PNG / WebP</div>
+        </div>
+        <div class="ref-grid" id="refGrid"></div>
+        <div class="ref-count" id="refCount"></div>
+        <input type="file" id="refInput" accept="image/png,image/jpeg,image/webp" multiple style="display:none">
+      </div>
 
-    <div class="progress-bar-wrapper" id="progressWrapper">
-      <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
-      <div class="progress-text" id="progressText">提交任务中…</div>
+      <button class="btn-generate" id="generateBtn" onclick="generate()">✨ 生成图片</button>
+
+      <div class="progress-bar-wrapper" id="progressWrapper">
+        <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
+        <div class="progress-text" id="progressText">提交任务中…</div>
+      </div>
+      <div class="error-msg" id="errorMsg"></div>
     </div>
-    <div class="error-msg" id="errorMsg"></div>
   </div>
 
+  <!-- ============ 视频生成区 ============ -->
+  <div id="videoSection" class="section-hidden">
+    <div class="card">
+      <div class="card-title">视频参数</div>
+      <div class="video-params">
+        <div class="form-group">
+          <label>视频时长 <span class="required">*</span></label>
+          <select id="videoDuration">
+            <option value="4">4 秒</option>
+            <option value="8">8 秒</option>
+            <option value="12">12 秒</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>画面方向 <span class="required">*</span></label>
+          <select id="videoOrientation">
+            <option value="landscape">横屏 16:9</option>
+            <option value="portrait">竖屏 9:16</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">描述 Prompt</div>
+      <div class="form-group">
+        <textarea id="videoPromptInput" placeholder="描述你想生成的视频场景…&#10;&#10;例如：落日余晖下的湖面，一只白鹭缓缓掠过，水面泛起金色涟漪，电影感画质"></textarea>
+      </div>
+      <button class="btn-generate" id="videoGenerateBtn" onclick="generateVideo()">🎬 生成视频</button>
+
+      <div class="progress-bar-wrapper" id="videoProgressWrapper">
+        <div class="progress-bar-bg"><div class="progress-bar-fill" id="videoProgressFill"></div></div>
+        <div class="progress-text" id="videoProgressText">提交任务中…</div>
+      </div>
+      <div class="error-msg" id="videoErrorMsg"></div>
+    </div>
+  </div>
+
+  <!-- ============ 结果展示区（通用） ============ -->
   <div class="card result-area" id="resultArea">
     <div class="card-title">
       生成结果
       <span style="font-size:11px;color:#555;font-weight:400;text-transform:none;letter-spacing:0;" id="resultMeta"></span>
     </div>
-    <img class="result-image" id="resultImage" alt="生成的图片" onclick="window.open(this.src,'_blank')">
+    <!-- 图片结果 -->
+    <img class="result-image" id="resultImage" alt="生成的图片" onclick="window.open(this.src,'_blank')" style="display:none">
+    <!-- 视频结果 -->
+    <video class="result-video" id="resultVideo" controls autoplay loop style="display:none">您的浏览器不支持视频播放</video>
     <div class="result-info" id="resultInfo"></div>
   </div>
 
+  <!-- ============ 历史记录 ============ -->
   <div class="card">
     <div class="card-title">历史记录 <span style="font-size:11px;color:#555;font-weight:400;text-transform:none;letter-spacing:0;">（仅保存在本浏览器）</span></div>
     <div class="gallery" id="gallery">
@@ -566,20 +636,49 @@ async function pollTask(taskId) {
   }
 }
 
+// ===== Tab 切换 =====
+let currentTab = 'image';
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('tabImage').classList.toggle('active', tab === 'image');
+  document.getElementById('tabVideo').classList.toggle('active', tab === 'video');
+  document.getElementById('imageSection').classList.toggle('section-hidden', tab !== 'image');
+  document.getElementById('videoSection').classList.toggle('section-hidden', tab !== 'video');
+}
+
+// ===== 图片生成结果展示 =====
 function showResult(data, elapsed) {
-  const imgUrl = data.result_url;
-  if (!imgUrl) { showError('生成成功但未获取到图片地址'); return; }
+  const url = data.result_url;
+  if (!url) { showError('生成成功但未获取到地址'); return; }
 
-  document.getElementById('resultImage').src = imgUrl;
-  document.getElementById('resultMeta').textContent = `${MODELS[currentModel].display} · ${elapsed}s`;
-  document.getElementById('resultInfo').innerHTML =
-    `模型: <span>${MODELS[currentModel].display}</span> · 耗时: <span>${elapsed} 秒</span>` +
-    (data.cost ? ` · 消耗: <span>${data.cost} 算力</span>` : '');
+  // 切换结果展示
+  document.getElementById('resultImage').style.display = 'none';
+  document.getElementById('resultVideo').style.display = 'none';
+
+  if (currentTab === 'video') {
+    // 视频结果
+    const vid = document.getElementById('resultVideo');
+    vid.src = url;
+    vid.style.display = 'block';
+    document.getElementById('resultMeta').textContent = `Sora-2 · ${elapsed}s`;
+    document.getElementById('resultInfo').innerHTML =
+      `模型: <span>Sora-2</span> · 耗时: <span>${elapsed} 秒</span>` +
+      (data.cost ? ` · 消耗: <span>${data.cost} 算力</span>` : '');
+    document.getElementById('videoProgressWrapper').classList.remove('visible');
+  } else {
+    // 图片结果
+    document.getElementById('resultImage').src = url;
+    document.getElementById('resultImage').style.display = 'block';
+    document.getElementById('resultMeta').textContent = `${MODELS[currentModel].display} · ${elapsed}s`;
+    document.getElementById('resultInfo').innerHTML =
+      `模型: <span>${MODELS[currentModel].display}</span> · 耗时: <span>${elapsed} 秒</span>` +
+      (data.cost ? ` · 消耗: <span>${data.cost} 算力</span>` : '');
+    document.getElementById('progressWrapper').classList.remove('visible');
+  }
+
   document.getElementById('resultArea').classList.add('visible');
-  document.getElementById('progressWrapper').classList.remove('visible');
-
-  // Save to history
-  addHistory(imgUrl, currentModel, MODELS[currentModel].display);
+  addHistory(url, currentModel, MODELS[currentModel]?.display || 'Sora-2');
 }
 
 function setProgress(pct, text) {
@@ -587,14 +686,119 @@ function setProgress(pct, text) {
   document.getElementById('progressText').textContent = text;
 }
 
+function setVideoProgress(pct, text) {
+  document.getElementById('videoProgressFill').style.width = `${Math.min(pct, 100)}%`;
+  document.getElementById('videoProgressText').textContent = text;
+}
+
 function showError(msg) {
-  const el = document.getElementById('errorMsg');
+  const el = currentTab === 'video'
+    ? document.getElementById('videoErrorMsg')
+    : document.getElementById('errorMsg');
   el.textContent = msg;
   el.classList.add('visible');
 }
 
 function hideError() {
-  document.getElementById('errorMsg').classList.remove('visible');
+  ['errorMsg', 'videoErrorMsg'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('visible');
+  });
+}
+
+// ===== 视频生成（Sora-2） =====
+async function generateVideo() {
+  const prompt = document.getElementById('videoPromptInput').value.trim();
+  if (!prompt) { showError('请输入视频描述'); return; }
+
+  hideError();
+  document.getElementById('resultArea').classList.remove('visible');
+  document.getElementById('resultVideo').style.display = 'none';
+
+  const btn = document.getElementById('videoGenerateBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ 生成中…';
+
+  const pw = document.getElementById('videoProgressWrapper');
+  pw.classList.add('visible');
+  setVideoProgress(5, '提交任务中…');
+
+  try {
+    const duration = document.getElementById('videoDuration').value;
+    const orientation = document.getElementById('videoOrientation').value;
+    const aspectRatio = orientation === 'landscape' ? '16:9' : '9:16';
+    const size = orientation === 'landscape' ? '1280x720' : '720x1280';
+
+    const body = {
+      model: 'sora-2',
+      prompt,
+      params: {
+        duration,
+        orientation,
+        aspect_ratio: aspectRatio,
+        size,
+        seconds: duration,
+      }
+    };
+
+    const resp = await fetch(`${API_BASE}/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    const data = await resp.json();
+    if (!resp.ok || data.code !== 200) {
+      throw new Error(data.msg || data.error?.message || data.error || `请求失败 (${resp.status})`);
+    }
+
+    const taskId = data.data?.task_id || data.id;
+    if (!taskId) throw new Error('未获取到任务ID');
+
+    setVideoProgress(15, `✅ 任务已提交，等待处理…`);
+    await pollVideoTask(taskId);
+  } catch (err) {
+    showError(err.message);
+    pw.classList.remove('visible');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🎬 生成视频';
+  }
+}
+
+async function pollVideoTask(taskId) {
+  const startTime = Date.now();
+  let lastProgress = '';
+
+  while (true) {
+    await new Promise(r => setTimeout(r, 5000));
+
+    const resp = await fetch(`${API_BASE}/status?task_id=${taskId}`);
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error?.message || data.error || `轮询失败 (${resp.status})`);
+
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    const pct = parseInt(data.progress) || 0;
+    const displayPct = Math.max(15, Math.min(pct, 90));
+
+    if (data.progress !== lastProgress) {
+      setVideoProgress(displayPct, `⏳ ${data.status || '生成中'} ${data.progress || ''} (${elapsed}s)`);
+      lastProgress = data.progress;
+    }
+
+    if (data.is_final) {
+      if (data.state === 'success' || data.status_group === '已完成') {
+        setVideoProgress(100, '✅ 生成完成！');
+        showResult(data, elapsed);
+        return;
+      } else {
+        throw new Error(data.error || '生成失败');
+      }
+    }
+
+    // 视频超时10分钟
+    if (elapsed > 600) throw new Error('生成超时（超过10分钟），请稍后重试');
+  }
 }
 
 // Balance
