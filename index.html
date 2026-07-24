@@ -507,9 +507,13 @@ function setMode(mode) {
   currentMode = mode;
   document.getElementById('modeImageBtn').className = 'toolbar-btn' + (mode==='image'?' active':'');
   document.getElementById('modeVideoBtn').className = 'toolbar-btn' + (mode==='video'?' active':'');
-  document.getElementById('imageModelGroup').style.display = mode==='image'?'':'none';
-  document.getElementById('imageParamGroup').style.display = mode==='image'?'':'none';
-  document.getElementById('videoModelGroup').style.display = mode==='video'?'':'none';
+  const imgGroup = document.getElementById('imageModelGroup');
+  const vidGroup = document.getElementById('videoModelGroup');
+  if (imgGroup) imgGroup.style.display = mode==='image'?'':'none';
+  if (vidGroup) {
+    if (mode==='video') { vidGroup.style.display = ''; vidGroup.classList.remove('section-hidden'); }
+    else { vidGroup.style.display = 'none'; vidGroup.classList.add('section-hidden'); }
+  }
   if (document.getElementById('paramPanel')) document.getElementById('paramPanel').style.display = 'none';
   paramsVisible = false;
   if (mode==='video') onVideoModelChange();
