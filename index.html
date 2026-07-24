@@ -105,16 +105,41 @@
   .toast.visible { display: block; animation: fadeIn 0.3s ease; }
   @keyframes fadeIn { from { opacity: 0; transform: translateX(-50%) translateY(-10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
 
-  /* 参考图上传 */
+  /* 参考图上传 - 拖拽区 */
   .ref-section { margin-top: 16px; padding-top: 16px; border-top: 1px solid #2a2a35; }
   .ref-label { font-size: 12px; color: #888; margin-bottom: 8px; }
-  .ref-area { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }
-  .ref-item { position: relative; width: 72px; height: 72px; border-radius: 10px; overflow: hidden; border: 1px solid #333; flex-shrink: 0; }
+  .drop-zone {
+    border: 2px dashed #333; border-radius: 12px; padding: 20px;
+    text-align: center; cursor: pointer; transition: all 0.2s;
+    color: #555; font-size: 13px; min-height: 100px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  }
+  .drop-zone:hover { border-color: #555; color: #888; }
+  .drop-zone.dragover { border-color: #7c5cfc; background: rgba(124,92,252,0.08); color: #c4b5fd; }
+  .drop-zone.dragover .drop-icon { transform: scale(1.1); }
+  .drop-zone.hidden { display: none; }
+  .drop-icon { width: 36px; height: 36px; color: #555; transition: transform 0.2s; }
+  .drop-zone.dragover .drop-icon { color: #7c5cfc; }
+  .drop-hint { font-size: 12px; color: #555; }
+  .drop-hint strong { color: #888; }
+
+  /* 图片列表 */
+  .ref-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .ref-item {
+    position: relative; width: 80px; height: 80px; border-radius: 10px;
+    overflow: hidden; border: 1px solid #333; flex-shrink: 0;
+    background: #1a1a23;
+  }
   .ref-item img { width: 100%; height: 100%; object-fit: cover; }
-  .ref-item .del-btn { position: absolute; top: 2px; right: 2px; width: 18px; height: 18px; border-radius: 50%; background: rgba(0,0,0,0.6); color: #fff; border: none; cursor: pointer; font-size: 10px; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; }
+  .ref-item .del-btn {
+    position: absolute; top: 3px; right: 3px; width: 20px; height: 20px;
+    border-radius: 50%; background: rgba(0,0,0,0.65); color: #fff;
+    border: none; cursor: pointer; font-size: 11px;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity 0.2s;
+  }
   .ref-item:hover .del-btn { opacity: 1; }
-  .ref-add { width: 72px; height: 72px; border-radius: 10px; border: 2px dashed #333; background: transparent; color: #555; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; gap: 2px; transition: all 0.2s; flex-shrink: 0; }
-  .ref-add:hover { border-color: #7c5cfc; color: #7c5cfc; }
+  .ref-count { font-size: 11px; color: #555; margin-top: 6px; }
 
   @media (max-width: 600px) {
     .params-row { grid-template-columns: 1fr; }
@@ -156,11 +181,23 @@
       <textarea id="promptInput" placeholder="用自然语言描述你想要的画面，越详细效果越好…&#10;&#10;例如：一只橘猫躺在阳光洒落的窗台上，身边有一杯冒着热气的咖啡，日系动漫风格"></textarea>
     </div>
 
-    <!-- 参考图上传 -->
+    <!-- 参考图上传（拖拽区 + 图片框） -->
     <div class="ref-section" id="refSection">
-      <div class="ref-label">📎 参考图（选填，GPT Image 2 支持图生图）</div>
-      <div class="ref-area" id="refArea"></div>
-      <input type="file" id="refInput" accept="image/*" multiple style="display:none">
+      <div class="ref-label">📎 参考图（选填 · 拖入或点击上传，最多14张）</div>
+      <!-- 拖拽放置区 -->
+      <div class="drop-zone" id="dropZone">
+        <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <div>拖入图片到此，或 <strong style="color:#7c5cfc">点击选择</strong></div>
+        <div class="drop-hint">支持 JPG / PNG / WebP</div>
+      </div>
+      <!-- 已上传图片列表 -->
+      <div class="ref-grid" id="refGrid"></div>
+      <div class="ref-count" id="refCount"></div>
+      <input type="file" id="refInput" accept="image/png,image/jpeg,image/webp" multiple style="display:none">
     </div>
 
     <button class="btn-generate" id="generateBtn" onclick="generate()">✨ 生成图片</button>
@@ -271,11 +308,16 @@ let pollingTimer = null;
 let history = JSON.parse(localStorage.getItem('imgHistory') || '[]');
 let refImages = []; // 参考图 data:URI 数组
 
-// Init reference image upload
-document.getElementById('refInput').addEventListener('change', function(e) {
-  const files = Array.from(e.target.files);
+// ===== 参考图：拖拽 + 点击上传 =====
+const dropZone = document.getElementById('dropZone');
+const refInput = document.getElementById('refInput');
+const refGrid = document.getElementById('refGrid');
+const refCount = document.getElementById('refCount');
+
+function handleFiles(files) {
   const remaining = 14 - refImages.length;
-  files.slice(0, remaining).forEach(file => {
+  Array.from(files).slice(0, remaining).forEach(file => {
+    if (!file.type.startsWith('image/')) return;
     const reader = new FileReader();
     reader.onload = function(ev) {
       refImages.push(ev.target.result);
@@ -283,28 +325,71 @@ document.getElementById('refInput').addEventListener('change', function(e) {
     };
     reader.readAsDataURL(file);
   });
-  e.target.value = '';
-});
+}
 
 function renderRefImages() {
-  const area = document.getElementById('refArea');
+  // 预览框
   let html = '';
   refImages.forEach((uri, i) => {
     html += `<div class="ref-item"><img src="${uri}" alt="参考图${i+1}"><button class="del-btn" onclick="removeRef(${i})">✕</button></div>`;
   });
-  if (refImages.length < 14) {
-    html += `<button class="ref-add" onclick="document.getElementById('refInput').click()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-      添加
-    </button>`;
-  }
-  area.innerHTML = html;
+  refGrid.innerHTML = html;
+
+  // 计数
+  refCount.textContent = refImages.length > 0 ? `${refImages.length} / 14 张` : '';
+
+  // 拖拽区显隐（有图就隐藏，没图就显示）
+  dropZone.classList.toggle('hidden', refImages.length > 0);
 }
 
 function removeRef(i) {
   refImages.splice(i, 1);
   renderRefImages();
 }
+
+// 点击拖拽区弹出文件选择
+dropZone.addEventListener('click', () => refInput.click());
+
+// 文件选择变更
+refInput.addEventListener('change', function(e) {
+  if (e.target.files?.length) {
+    handleFiles(e.target.files);
+    e.target.value = '';
+  }
+});
+
+// 拖拽事件
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => {
+  dropZone.addEventListener(evt, function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  });
+});
+
+dropZone.addEventListener('dragenter', () => dropZone.classList.add('dragover'));
+dropZone.addEventListener('dragover', () => dropZone.classList.add('dragover'));
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+
+dropZone.addEventListener('drop', function(e) {
+  dropZone.classList.remove('dragover');
+  if (e.dataTransfer.files?.length) {
+    handleFiles(e.dataTransfer.files);
+  }
+  // 处理从浏览器拖出的图片URL
+  const imgUrl = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/html');
+  if (imgUrl) {
+    const match = imgUrl.match(/src="([^"]+)"/) || imgUrl.match(/^(https?:\/\/.+\.(png|jpg|jpeg|webp))/i);
+    if (match) {
+      refImages.push(match[1]);
+      renderRefImages();
+      showToast('已添加外部图片链接');
+    }
+  }
+});
+
+// 允许从外部拖入到整个页面（防止浏览器直接打开图片）
+document.body.addEventListener('dragover', e => e.preventDefault());
+document.body.addEventListener('drop', e => e.preventDefault());
 
 // Init model buttons
 function initModelGrid() {
