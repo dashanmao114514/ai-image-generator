@@ -94,6 +94,8 @@
   }
   .balance-tag:hover { border-color: #7c5cfc; color: #c4b5fd; }
   .balance-tag.loading { opacity: 0.5; pointer-events: none; }
+  .balance-tag.recharge { border-color: #f59e0b; color: #fbbf24; background: rgba(245,158,11,0.1); }
+  .balance-tag.recharge:hover { border-color: #f59e0b; background: rgba(245,158,11,0.2); }
 
   .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-top: 12px; }
   .gallery-item { position: relative; border-radius: 10px; overflow: hidden; aspect-ratio: 1; background: #252530; }
@@ -176,7 +178,10 @@
       <circle cx="17.5" cy="20.5" r="0.8" fill="white"/>
     </svg>
     大山猫 AI
-    <span class="balance-tag" id="balanceTag" onclick="checkBalance()">查余额</span>
+    <span style="display:flex;gap:6px;align-items:center;margin-left:auto">
+      <a class="balance-tag recharge" href="https://qiaojiang.lk666.ai/home?menu=zhinengti" target="_blank" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px">💰 充值</a>
+      <span class="balance-tag" id="balanceTag" onclick="checkBalance()">查余额</span>
+    </span>
   </h1>
   <p class="subtitle">大山猫 AI · 图片生成 & 视频生成</p>
 
