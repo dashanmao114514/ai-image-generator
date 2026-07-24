@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI 图片生成器</title>
+<title>大山猫 AI 图片生成器</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
@@ -105,6 +105,17 @@
   .toast.visible { display: block; animation: fadeIn 0.3s ease; }
   @keyframes fadeIn { from { opacity: 0; transform: translateX(-50%) translateY(-10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
 
+  /* 参考图上传 */
+  .ref-section { margin-top: 16px; padding-top: 16px; border-top: 1px solid #2a2a35; }
+  .ref-label { font-size: 12px; color: #888; margin-bottom: 8px; }
+  .ref-area { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }
+  .ref-item { position: relative; width: 72px; height: 72px; border-radius: 10px; overflow: hidden; border: 1px solid #333; flex-shrink: 0; }
+  .ref-item img { width: 100%; height: 100%; object-fit: cover; }
+  .ref-item .del-btn { position: absolute; top: 2px; right: 2px; width: 18px; height: 18px; border-radius: 50%; background: rgba(0,0,0,0.6); color: #fff; border: none; cursor: pointer; font-size: 10px; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; }
+  .ref-item:hover .del-btn { opacity: 1; }
+  .ref-add { width: 72px; height: 72px; border-radius: 10px; border: 2px dashed #333; background: transparent; color: #555; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; gap: 2px; transition: all 0.2s; flex-shrink: 0; }
+  .ref-add:hover { border-color: #7c5cfc; color: #7c5cfc; }
+
   @media (max-width: 600px) {
     .params-row { grid-template-columns: 1fr; }
     .model-grid { grid-template-columns: 1fr; }
@@ -117,10 +128,16 @@
 
 <div class="container">
   <h1>
-    AI 图片生成器
+    <svg width="30" height="30" viewBox="0 0 32 32" fill="none" style="display:inline-block;vertical-align:middle">
+      <path d="M4 28L10 10L14 20L18 8L22 18L28 28H4Z" fill="#7c5cfc" opacity="0.9"/>
+      <circle cx="16" cy="21" r="4" fill="#7c5cfc" opacity="0.85"/>
+      <circle cx="14.5" cy="20.5" r="0.8" fill="white"/>
+      <circle cx="17.5" cy="20.5" r="0.8" fill="white"/>
+    </svg>
+    大山猫 AI
     <span class="balance-tag" id="balanceTag" onclick="checkBalance()">查余额</span>
   </h1>
-  <p class="subtitle">选择模型，输入描述，AI 即刻生成</p>
+  <p class="subtitle">大山猫 AI · 由 GPT Image 2 / Gemini / Qwen 驱动，输入描述一键生成</p>
 
   <div class="card">
     <div class="card-title">选择模型</div>
@@ -138,6 +155,14 @@
     <div class="form-group">
       <textarea id="promptInput" placeholder="用自然语言描述你想要的画面，越详细效果越好…&#10;&#10;例如：一只橘猫躺在阳光洒落的窗台上，身边有一杯冒着热气的咖啡，日系动漫风格"></textarea>
     </div>
+
+    <!-- 参考图上传 -->
+    <div class="ref-section" id="refSection">
+      <div class="ref-label">📎 参考图（选填，GPT Image 2 支持图生图）</div>
+      <div class="ref-area" id="refArea"></div>
+      <input type="file" id="refInput" accept="image/*" multiple style="display:none">
+    </div>
+
     <button class="btn-generate" id="generateBtn" onclick="generate()">✨ 生成图片</button>
 
     <div class="progress-bar-wrapper" id="progressWrapper">
@@ -221,14 +246,65 @@ const MODELS = {
       { name: 'prompt_extend', label: '智能优化 Prompt', type: 'radio', required: false,
         options: [{ v: 'true', l: '开启' }, { v: 'false', l: '关闭' }]}
     ]
+  },
+  'gpt-image-2': {
+    display: 'GPT Image 2',
+    desc: 'OpenAI 最新旗舰 · 文生图',
+    params: [
+      { name: 'size', label: '图片尺寸', type: 'select', required: true,
+        options: [
+          { v: 'auto', l: '自动' }, { v: '1024x1024', l: '1024×1024 方形' },
+          { v: '1024x1536', l: '1024×1536 竖屏' }, { v: '1536x1024', l: '1536×1024 横屏' },
+          { v: '960x1280', l: '960×1280 竖屏' }, { v: '1280x960', l: '1280×960 横屏' },
+          { v: '1088x1920', l: '1088×1920 手机壁纸' }, { v: '1920x1088', l: '1920×1088 宽屏' }
+        ]},
+      { name: 'quality', label: '图片质量', type: 'select', required: false,
+        options: [{ v: 'auto', l: '自动' }, { v: 'high', l: '高质量' }, { v: 'medium', l: '中等' }, { v: 'low', l: '低质量' }]}
+    ]
   }
 };
 
-const MODEL_ORDER = ['gemini-3-pro-image-preview', 'gemini-3.1-flash-image-preview', 'qwen-image'];
+const MODEL_ORDER = ['gemini-3-pro-image-preview', 'gemini-3.1-flash-image-preview', 'qwen-image', 'gpt-image-2'];
 
 let currentModel = 'gemini-3-pro-image-preview';
 let pollingTimer = null;
 let history = JSON.parse(localStorage.getItem('imgHistory') || '[]');
+let refImages = []; // 参考图 data:URI 数组
+
+// Init reference image upload
+document.getElementById('refInput').addEventListener('change', function(e) {
+  const files = Array.from(e.target.files);
+  const remaining = 14 - refImages.length;
+  files.slice(0, remaining).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      refImages.push(ev.target.result);
+      renderRefImages();
+    };
+    reader.readAsDataURL(file);
+  });
+  e.target.value = '';
+});
+
+function renderRefImages() {
+  const area = document.getElementById('refArea');
+  let html = '';
+  refImages.forEach((uri, i) => {
+    html += `<div class="ref-item"><img src="${uri}" alt="参考图${i+1}"><button class="del-btn" onclick="removeRef(${i})">✕</button></div>`;
+  });
+  if (refImages.length < 14) {
+    html += `<button class="ref-add" onclick="document.getElementById('refInput').click()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+      添加
+    </button>`;
+  }
+  area.innerHTML = html;
+}
+
+function removeRef(i) {
+  refImages.splice(i, 1);
+  renderRefImages();
+}
 
 // Init model buttons
 function initModelGrid() {
@@ -344,6 +420,9 @@ async function generate() {
 
   try {
     const params = getParams();
+    if (refImages.length > 0) {
+      params.images = refImages;
+    }
     const body = { model: currentModel, prompt, params };
 
     const resp = await fetch(`${API_BASE}/generate`, {
