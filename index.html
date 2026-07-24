@@ -303,60 +303,9 @@
 
   <!-- ═══════════════ 对话 Tab ═══════════════ -->
   <div id="tabChat">
-    <!-- 工具栏 -->
-    <div class="chat-toolbar" id="chatToolbar">
-      <div class="toolbar-group">
-        <label>模式</label>
-        <button class="toolbar-btn active" id="modeImageBtn" onclick="setMode('image')">🎨 图片</button>
-        <button class="toolbar-btn" id="modeVideoBtn" onclick="setMode('video')">🎬 视频</button>
-      </div>
-      <div class="toolbar-group" id="imageModelGroup">
-        <label>模型</label>
-        <select class="toolbar-select" id="chatModelSelect"></select>
-      </div>
-      <div class="toolbar-group section-hidden" id="videoModelGroup">
-        <label>模型</label>
-        <select class="toolbar-select" id="chatVideoModel" onchange="onVideoModelChange()">
-          <option value="sora-2">Sora-2</option>
-          <option value="kwvideo-v2-quannengcankao">SD 2.0 全能参考</option>
-        </select>
-        <!-- Sora-2 参数 -->
-        <span id="sora2Params">
-          <label>时长</label>
-          <select class="toolbar-select" id="chatVideoDuration">
-            <option value="4">4秒</option><option value="8">8秒</option><option value="12">12秒</option>
-          </select>
-          <label>方向</label>
-          <select class="toolbar-select" id="chatVideoOrientation">
-            <option value="landscape">横屏</option><option value="portrait">竖屏</option>
-          </select>
-        </span>
-        <!-- SD 2.0 额外参数（默认隐藏） -->
-        <span id="sd20Params" style="display:none">
-          <label>版本</label>
-          <select class="toolbar-select" id="sdVersion">
-            <option value="标准">标准</option><option value="快速">快速</option><option value="Mini">Mini</option>
-          </select>
-          <label>时长</label>
-          <select class="toolbar-select" id="sdDuration">
-            <option value="auto">自动</option><option value="4">4秒</option><option value="5">5秒</option><option value="6">6秒</option>
-            <option value="7">7秒</option><option value="8">8秒</option><option value="9">9秒</option><option value="10">10秒</option>
-          </select>
-          <label>分辨率</label>
-          <select class="toolbar-select" id="sdResolution">
-            <option value="480p">480p</option><option value="720p">720p</option><option value="1080p">1080p</option>
-          </select>
-          <label>比例</label>
-          <select class="toolbar-select" id="sdRatio">
-            <option value="adaptive">自适应</option><option value="16:9">16:9</option><option value="9:16">9:16</option>
-            <option value="1:1">1:1</option><option value="4:3">4:3</option><option value="3:4">3:4</option>
-          </select>
-        </span>
-        <button class="toolbar-btn" style="font-size:11px" onclick="togglePriceTable()">💰 价格</button>
-      </div>
-      <div class="toolbar-group" id="imageParamGroup">
-        <button class="toolbar-btn" id="paramToggleBtn" onclick="toggleParams()">⚙️ 参数</button>
-      </div>
+    <!-- 参数展开（默认隐藏，用于图片模式的扩展参数） -->
+    <div id="paramPanel" style="display:none;background:#1a1a23;border:1px solid #2a2a35;border-radius:12px;padding:14px;margin-bottom:10px;flex-shrink:0;">
+      <div id="chatParams" class="params-row" style="grid-template-columns:1fr 1fr;"></div>
     </div>
 
     <!-- 价格表 -->
@@ -377,11 +326,6 @@
       <div style="color:#555;margin-top:8px;font-size:11px;">具体费用以巧匠AI平台实际扣费为准</div>
     </div>
 
-    <!-- 参数展开（默认隐藏） -->
-    <div id="paramPanel" style="display:none;background:#1a1a23;border:1px solid #2a2a35;border-radius:12px;padding:14px;margin-bottom:10px;flex-shrink:0;">
-      <div id="chatParams" class="params-row" style="grid-template-columns:1fr 1fr;"></div>
-    </div>
-
     <!-- 消息区 -->
     <div class="chat-messages" id="chatMessages">
       <div class="msg-empty" id="msgEmpty">
@@ -391,8 +335,51 @@
       </div>
     </div>
 
-    <!-- 输入区 -->
+    <!-- 输入区（底部固定，含工具栏） -->
     <div class="chat-input-area">
+      <!-- 模型工具栏（内嵌在输入区顶部） -->
+      <div class="chat-toolbar" id="chatToolbar" style="margin-bottom:10px;padding:6px 0;border:none;background:transparent;flex-wrap:wrap;">
+        <div class="toolbar-group">
+          <button class="toolbar-btn active" id="modeImageBtn" onclick="setMode('image')">🎨 图片</button>
+          <button class="toolbar-btn" id="modeVideoBtn" onclick="setMode('video')">🎬 视频</button>
+        </div>
+        <div class="toolbar-group" id="imageModelGroup">
+          <label>模型</label>
+          <select class="toolbar-select" id="chatModelSelect"></select>
+          <button class="toolbar-btn" id="paramToggleBtn" onclick="toggleParams()" style="font-size:10px">⚙️</button>
+        </div>
+        <div class="toolbar-group section-hidden" id="videoModelGroup" style="flex-wrap:wrap;gap:4px;">
+          <label>模型</label>
+          <select class="toolbar-select" id="chatVideoModel" onchange="onVideoModelChange()" style="font-size:11px">
+            <option value="sora-2">Sora-2</option>
+            <option value="kwvideo-v2-quannengcankao">SD 2.0</option>
+          </select>
+          <span id="sora2Params">
+            <select class="toolbar-select" id="chatVideoDuration" style="font-size:11px">
+              <option value="4">4s</option><option value="8">8s</option><option value="12">12s</option>
+            </select>
+            <select class="toolbar-select" id="chatVideoOrientation" style="font-size:11px">
+              <option value="landscape">横屏</option><option value="portrait">竖屏</option>
+            </select>
+          </span>
+          <span id="sd20Params" style="display:none">
+            <select class="toolbar-select" id="sdVersion" style="font-size:11px">
+              <option value="标准">标准</option><option value="快速">快速</option><option value="Mini">Mini</option>
+            </select>
+            <select class="toolbar-select" id="sdDuration" style="font-size:11px">
+              <option value="auto">自动</option><option value="4">4s</option><option value="5">5s</option><option value="6">6s</option><option value="7">7s</option><option value="8">8s</option><option value="10">10s</option>
+            </select>
+            <select class="toolbar-select" id="sdResolution" style="font-size:11px">
+              <option value="480p">480p</option><option value="720p">720p</option><option value="1080p">1080p</option>
+            </select>
+            <select class="toolbar-select" id="sdRatio" style="font-size:11px">
+              <option value="adaptive">自适应</option><option value="16:9">16:9</option><option value="9:16">9:16</option><option value="1:1">1:1</option>
+            </select>
+          </span>
+          <button class="toolbar-btn" style="font-size:10px" onclick="togglePriceTable()">💰</button>
+        </div>
+      </div>
+
       <div class="chat-ref-row" id="chatRefRow"></div>
       <div class="chat-input-row">
         <textarea id="chatInput" rows="1" placeholder="输入描述，按 Enter 发送…" onkeydown="onChatKeydown(event)"></textarea>
