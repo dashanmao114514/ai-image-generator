@@ -289,7 +289,7 @@
       大山猫 AI 工作室
     </div>
     <div class="actions">
-      <a class="pill recharge" href="https://qiaojiang.lk666.ai/home?menu=zhinengti" target="_blank">💰 充值</a>
+      <a class="pill recharge" href="https://qiaojiang.lk666.ai/wode" target="_blank">💰 充值</a>
       <span class="pill" id="balanceTag" onclick="checkBalance()">查余额</span>
     </div>
   </div>
@@ -315,18 +315,66 @@
         <select class="toolbar-select" id="chatModelSelect"></select>
       </div>
       <div class="toolbar-group section-hidden" id="videoModelGroup">
-        <label>时长</label>
-        <select class="toolbar-select" id="chatVideoDuration">
-          <option value="4">4秒</option><option value="8">8秒</option><option value="12">12秒</option>
+        <label>模型</label>
+        <select class="toolbar-select" id="chatVideoModel" onchange="onVideoModelChange()">
+          <option value="sora-2">Sora-2</option>
+          <option value="kwvideo-v2-quannengcankao">SD 2.0 全能参考</option>
         </select>
-        <label>方向</label>
-        <select class="toolbar-select" id="chatVideoOrientation">
-          <option value="landscape">横屏</option><option value="portrait">竖屏</option>
-        </select>
+        <!-- Sora-2 参数 -->
+        <span id="sora2Params">
+          <label>时长</label>
+          <select class="toolbar-select" id="chatVideoDuration">
+            <option value="4">4秒</option><option value="8">8秒</option><option value="12">12秒</option>
+          </select>
+          <label>方向</label>
+          <select class="toolbar-select" id="chatVideoOrientation">
+            <option value="landscape">横屏</option><option value="portrait">竖屏</option>
+          </select>
+        </span>
+        <!-- SD 2.0 额外参数（默认隐藏） -->
+        <span id="sd20Params" style="display:none">
+          <label>版本</label>
+          <select class="toolbar-select" id="sdVersion">
+            <option value="标准">标准</option><option value="快速">快速</option><option value="Mini">Mini</option>
+          </select>
+          <label>时长</label>
+          <select class="toolbar-select" id="sdDuration">
+            <option value="auto">自动</option><option value="4">4秒</option><option value="5">5秒</option><option value="6">6秒</option>
+            <option value="7">7秒</option><option value="8">8秒</option><option value="9">9秒</option><option value="10">10秒</option>
+          </select>
+          <label>分辨率</label>
+          <select class="toolbar-select" id="sdResolution">
+            <option value="480p">480p</option><option value="720p">720p</option><option value="1080p">1080p</option>
+          </select>
+          <label>比例</label>
+          <select class="toolbar-select" id="sdRatio">
+            <option value="adaptive">自适应</option><option value="16:9">16:9</option><option value="9:16">9:16</option>
+            <option value="1:1">1:1</option><option value="4:3">4:3</option><option value="3:4">3:4</option>
+          </select>
+        </span>
+        <button class="toolbar-btn" style="font-size:11px" onclick="togglePriceTable()">💰 价格</button>
       </div>
       <div class="toolbar-group" id="imageParamGroup">
         <button class="toolbar-btn" id="paramToggleBtn" onclick="toggleParams()">⚙️ 参数</button>
       </div>
+    </div>
+
+    <!-- 价格表 -->
+    <div id="priceTable" style="display:none;background:#1a1a23;border:1px solid #2a2a35;border-radius:12px;padding:14px;margin-bottom:10px;flex-shrink:0;font-size:12px;max-height:300px;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+        <span style="font-weight:600;color:#aaa;">模型价格参考</span>
+        <span style="color:#555;cursor:pointer" onclick="togglePriceTable()">✕</span>
+      </div>
+      <table style="width:100%;border-collapse:collapse;">
+        <tr style="color:#666;border-bottom:1px solid #2a2a35;"><th style="padding:4px 6px;text-align:left">模型</th><th style="padding:4px 6px;text-align:left">分辨率</th><th style="padding:4px 6px;text-align:right">价格</th></tr>
+        <tr style="border-bottom:1px solid #1a1a23;"><td style="padding:4px 6px;">GPT Image 2</td><td style="padding:4px 6px;">—</td><td style="padding:4px 6px;text-align:right;color:#fbbf24;">按次计费</td></tr>
+        <tr style="border-bottom:1px solid #1a1a23;"><td style="padding:4px 6px;">Nano Banana Pro</td><td style="padding:4px 6px;">1K~4K</td><td style="padding:4px 6px;text-align:right;color:#fbbf24;">按次计费</td></tr>
+        <tr style="border-bottom:1px solid #1a1a23;"><td style="padding:4px 6px;">Nano Banana 2</td><td style="padding:4px 6px;">0.5K~4K</td><td style="padding:4px 6px;text-align:right;color:#fbbf24;">按次计费</td></tr>
+        <tr style="border-bottom:1px solid #1a1a23;"><td style="padding:4px 6px;">Qwen-image-max</td><td style="padding:4px 6px;">—</td><td style="padding:4px 6px;text-align:right;color:#fbbf24;">按次计费</td></tr>
+        <tr style="border-bottom:1px solid #1a1a23;"><td style="padding:4px 6px;">Sora-2</td><td style="padding:4px 6px;">720p</td><td style="padding:4px 6px;text-align:right;color:#fbbf24;">按次计费</td></tr>
+        <tr><td style="padding:4px 6px;">SD 2.0 全能参考</td><td style="padding:4px 6px;">480p/720p/1080p</td><td style="padding:4px 6px;text-align:right;color:#fbbf24;">按 Token 计费</td></tr>
+      </table>
+      <div style="color:#555;margin-top:8px;font-size:11px;">具体费用以巧匠AI平台实际扣费为准</div>
     </div>
 
     <!-- 参数展开（默认隐藏） -->
@@ -477,6 +525,18 @@ function setMode(mode) {
   document.getElementById('videoModelGroup').style.display = mode==='video'?'':'none';
   if (document.getElementById('paramPanel')) document.getElementById('paramPanel').style.display = 'none';
   paramsVisible = false;
+  if (mode==='video') onVideoModelChange();
+}
+
+function onVideoModelChange() {
+  const v = document.getElementById('chatVideoModel').value;
+  document.getElementById('sora2Params').style.display = v==='sora-2'?'':'none';
+  document.getElementById('sd20Params').style.display = v==='kwvideo-v2-quannengcankao'?'':'none';
+}
+
+function togglePriceTable() {
+  const el = document.getElementById('priceTable');
+  el.style.display = el.style.display==='none'?'block':'none';
 }
 
 function toggleParams() {
@@ -567,7 +627,8 @@ function appendMessageDOM(msg, scroll) {
   } else if (msg.resultUrl) {
     const r = document.createElement('div');
     r.className = 'msg-result';
-    const label = msg.type==='video'?'Sora-2':(MODELS[msg.model]?MODELS[msg.model].display:msg.model);
+    const videoLabels = {'sora-2':'Sora-2','kwvideo-v2-quannengcankao':'SD 2.0 全能参考'};
+    const label = msg.type==='video'?(videoLabels[msg.model]||msg.model):(MODELS[msg.model]?MODELS[msg.model].display:msg.model);
     const media = msg.type==='video'
       ? '<video class="msg-video" src="' + msg.resultUrl + '" controls autoplay loop></video>'
       : '<img class="msg-image" src="' + msg.resultUrl + '" onclick="window.open(this.src,\'_blank\')">';
@@ -660,12 +721,34 @@ async function generateImage(prompt, msgId) {
 }
 
 async function generateVideo(prompt, msgId) {
-  const duration = document.getElementById('chatVideoDuration').value;
-  const orientation = document.getElementById('chatVideoOrientation').value;
-  const body = {
-    model: 'sora-2', prompt,
-    params: { duration, orientation, aspect_ratio: orientation==='landscape'?'16:9':'9:16', size: orientation==='landscape'?'1280x720':'720x1280', seconds: duration }
-  };
+  const videoModel = document.getElementById('chatVideoModel').value;
+  let body;
+
+  if (videoModel === 'sora-2') {
+    const duration = document.getElementById('chatVideoDuration').value;
+    const orientation = document.getElementById('chatVideoOrientation').value;
+    body = {
+      model: 'sora-2', prompt,
+      params: { duration, orientation, aspect_ratio: orientation==='landscape'?'16:9':'9:16', size: orientation==='landscape'?'1280x720':'720x1280', seconds: duration }
+    };
+  } else {
+    // SD 2.0 全能参考
+    body = {
+      model: 'kwvideo-v2-quannengcankao', prompt,
+      params: {
+        _quan_neng_mode: 'quan_neng',
+        version: document.getElementById('sdVersion').value,
+        duration: document.getElementById('sdDuration').value,
+        resolution: document.getElementById('sdResolution').value,
+        aspect_ratio: document.getElementById('sdRatio').value,
+      }
+    };
+    // 如果有参考图，加到 params
+    if (chatRefImages.length > 0) {
+      body.params.image_url = chatRefImages[0]; // SD 2.0 传第一张参考图
+    }
+  }
+
   const resp = await fetch(API_BASE + '/generate', {
     method: 'POST', headers: {'Content-Type':'application/json'},
     body: JSON.stringify(body)
@@ -683,8 +766,9 @@ async function generateVideo(prompt, msgId) {
     const elapsed = Math.floor((Date.now() - startTime) / 1000);
     if (d2.is_final) {
       if (d2.state === 'success' || d2.status_group === '已完成') {
-        addAsset(d2.result_url, 'video', 'Sora-2');
-        updateMessageDOM(msgId, { resultUrl: d2.result_url, elapsed, cost: d2.cost, type: 'video', model: 'sora-2' });
+        const modelLabel = videoModel === 'sora-2' ? 'Sora-2' : 'SD 2.0';
+        addAsset(d2.result_url, 'video', modelLabel);
+        updateMessageDOM(msgId, { resultUrl: d2.result_url, elapsed, cost: d2.cost, type: 'video', model: videoModel });
         return;
       } else throw new Error(d2.error || '生成失败');
     }
